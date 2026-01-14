@@ -1,7 +1,14 @@
 import joblib
 import numpy as np
-from entity import Dataset
+from entity import *
 import pandas as pd
+
+import tempfile
+from datetime import datetime
+import camelot
+
+from chat_bot import askAI
+
 
 def saveDataset(total_assets, total_liabilities, new_liability, income, monthly_emi, risk_score):
     new_row = {
@@ -70,5 +77,47 @@ def predict_risk(dataset: Dataset):
     return pred_label
 
 
-def getSuggetion():
-    pass
+def readFromPdf(pdf_bytes: bytes):
+    statements = []
+
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+        tmp.write(pdf_bytes)
+        pdf_path = tmp.name
+
+    tables = camelot.read_pdf(pdf_path, pages="1", flavor="lattice")
+
+    for table in tables:
+        df = table.df
+
+        if "Debit" not in df.iloc[0].values:
+            continue
+
+        df = df.iloc[1:]
+
+        for _, row in df.iterrows():
+            date = datetime.strptime(row[1].strip(), "%d/%m/%Y")
+            particular = row[2].strip()
+
+            debit = row[4].replace(",", "").strip()
+            credit = row[5].replace(",", "").strip()
+
+            if debit and debit != "-":
+                statements.append(
+                    BankStatement(
+                        date=date,
+                        particular=particular,
+                        transactionType=TransactionType.DEBIT,
+                        amount=float(debit)
+                    )
+                )
+            elif credit and credit != "-":
+                statements.append(
+                    BankStatement(
+                        date=date,
+                        particular=particular,
+                        transactionType=TransactionType.CREDIT,
+                        amount=float(credit)
+                    )
+                )
+
+    return statements
