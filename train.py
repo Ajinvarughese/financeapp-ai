@@ -8,8 +8,20 @@ import joblib
 df = pd.read_csv("dataset/financial_risk_dataset.csv")
 
 
-X = df[["Total Assets", "Total Liabilities", "New Liability Amount", "Income", "Monthly EMI"]]
-y = df["Risk Score"]
+X = df[
+    [
+        "total_assets",
+        "total_liabilities",
+        "new_liability",
+        "monthly_emi",
+        "asset_buffer",
+        "debt_ratio",
+        "new_liability_ratio",
+        "emi_ratio"
+    ]
+]
+
+y = df["risk_score"]
 
 
 label_encoder = LabelEncoder()

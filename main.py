@@ -20,25 +20,10 @@ def chat(req: ChatRequest):
 
 app = FastAPI()
 
-# @app.post("/ai/risk")
-# def predict(asset: Asset, liabilities: Liability, new_liability: Liability ):
-#     total_assets: float
-#     total_liabilities: float
-#     new_liability: float
-#     income: float
-#     monthly_emi: float
-#     risk_score: float = 0 
-
-#     newData = [
-#         "total_assets": (for e in asset )
-#         "total_liabilities": 
-#         new_liability: float
-#         income: float
-#         monthly_emi: float
-#         risk_score: float = 0 
-#     ]
-#     risk = predict_risk(dataset)
-#     return risk
+@app.post("/ai/risk")
+def predict(dataset: Dataset):
+    risk = predict_risk(dataset)
+    return risk
 
 @app.post("/ai/save-dataset")
 def save_dataset(dataset: Dataset):
@@ -46,7 +31,6 @@ def save_dataset(dataset: Dataset):
         dataset.total_assets,
         dataset.total_liabilities,
         dataset.new_liability,
-        dataset.income,
         dataset.monthly_emi
     )   
 

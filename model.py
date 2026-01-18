@@ -6,8 +6,7 @@ import pandas as pd
 import tempfile
 from datetime import datetime
 import camelot
-
-from chat_bot import askAI
+from chat_bot import recommendation
 
 
 def saveDataset(total_assets, total_liabilities, new_liability, income, monthly_emi, risk_score):
@@ -30,51 +29,73 @@ def saveDataset(total_assets, total_liabilities, new_liability, income, monthly_
 model = joblib.load("dataset/risk_model.pkl")
 label_encoder = joblib.load("dataset/risk_label_encoder.pkl")
 
-def predict_risk(dataset: Dataset):
+def predict_risk(dataset: Dataset) -> PredictedResponse:
     """
     Predict risk of a new liability.
-    Business rules + ML model.
+    Business rules first, then ML for borderline cases.
     """
+
     total_assets = dataset.total_assets
     total_liabilities = dataset.total_liabilities
     new_liability = dataset.new_liability
-    income = dataset.income
     monthly_emi = dataset.monthly_emi
-
 
     # ---------- 1. Business Rule Layer ----------
     financial_score = total_assets - total_liabilities
 
-    # Avoid division by zero
     base = financial_score if financial_score > 0 else 1
     risk_ratio = new_liability / base
 
-    # Hard safety rules
     if financial_score <= 0:
-        return "Not Recommended"   # already over-leveraged
+        description = recommendation("NOT_RECOMMENDED", dataset)
+        return PredictedResponse(
+            riskClass="NOT_RECOMMENDED",
+            description=description
+        )
 
     if risk_ratio > 0.60:
-        return "Not Recommended"
+        description = recommendation("NOT_RECOMMENDED", dataset)
+        return PredictedResponse(
+            riskClass="NOT_RECOMMENDED",
+            description=description
+        )
 
     if 0.25 < risk_ratio <= 0.60:
-        # This could be Risky, we can either:
-        # a) directly return "Risky"
-        # or b) let the model decide
-        return "Risky"
+        description = recommendation("RISKY", dataset)
+        return PredictedResponse(
+            riskClass="RISKY",
+            description=description
+        )
 
-    # ---------- 2. ML Model Layer (only for reasonable cases) ----------
-    data = [[
+    # ---------- 2. ML Model Layer ----------
+    asset_buffer = total_assets - total_liabilities
+
+    debt_ratio = total_liabilities / total_assets if total_assets > 0 else 0
+    new_liability_ratio = new_liability / asset_buffer if asset_buffer > 0 else 0
+    emi_ratio = monthly_emi / total_assets if total_assets > 0 else 0
+
+    arr = np.array([[
         total_assets,
         total_liabilities,
-        new_liability, 
-        income, 
+        new_liability,
         monthly_emi,
-    ]]
+        asset_buffer,
+        debt_ratio,
+        new_liability_ratio,
+        emi_ratio
+    ]])
 
-    arr = np.array(data)
     pred_encoded = model.predict(arr)[0]
-    pred_label = label_encoder.inverse_transform([pred_encoded])[0]
-    return pred_label
+    riskClass = label_encoder.inverse_transform([pred_encoded])[0]
+    riskClass = riskClass.upper().replace(" ", "_")
+
+    description = recommendation(riskClass, dataset)
+
+    return PredictedResponse(
+        riskClass=riskClass,
+        description=description
+    )
+
 
 
 def readFromPdf(pdf_bytes: bytes):

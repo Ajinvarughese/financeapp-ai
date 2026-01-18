@@ -7,7 +7,6 @@ class Dataset(BaseModel):
     total_assets: float
     total_liabilities: float
     new_liability: float
-    income: float
     monthly_emi: float
     risk_score: float = 0 
 
@@ -38,7 +37,7 @@ class BankStatement(BaseModel):
     amount: float
 
 class Asset(BaseModel):
-    source: str
+    name: str
     income: float
     expense: float
     debt: float
@@ -50,3 +49,6 @@ class Liability(BaseModel):
     months: int
     expense: float;
 
+class PredictedResponse(BaseModel):
+    riskClass: str
+    description: str 

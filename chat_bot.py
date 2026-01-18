@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from openai import OpenAI
-
+from entity import Dataset
 
 SYSTEM_PROMPT = """
 You are a friendly finance assistant.
@@ -16,6 +16,21 @@ You mainly help with finance-related questions (money, savings, loans, budgeting
 You are allowed to:
 - remember and repeat basic details the user shares (like their name)
 - answer simple memory questions such as "what is my name?"
+
+If the user asks something completely unrelated to finance
+(and not about recalling stored user details),
+politely reply that you are here to help with financial issues only.
+"""
+
+SYSTEM_PROMPT_FOR_RECOMMENDATIONS = """
+You are a friendly finance assistant.
+
+Reply like in a precise brief paragraph:
+- short and clear
+- human tone
+- use a few emojis 🙂
+
+You mainly help with finance-related questions (money, savings, loans, budgeting, investing).
 
 If the user asks something completely unrelated to finance
 (and not about recalling stored user details),
@@ -101,3 +116,47 @@ def askAI(user_input: str, chat_log: list = [], asset: list = [], liability: lis
     chat_log.append({"role": "assistant", "content": response_text})
 
     return response_text
+
+
+# ================== Get Recommendations from AI ==================
+
+def recommendation(riskPrediction: str, dataset: Dataset) -> str:
+    client = get_client()
+    messages = [
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT_FOR_RECOMMENDATIONS
+        },
+        {
+            "role": "user",
+            "content": f"""
+                User total assets: {dataset.total_assets} rs
+                User total liabilities: {dataset.total_liabilities} rs
+
+                Risk Prediction: {riskPrediction}
+
+                Generate a recommendation for the user based on the risk prediction.
+                """
+        }
+    ]
+
+    completion = client.chat.completions.create(
+        model="openai/gpt-oss-20b",
+        messages=messages,
+        temperature=1,
+        top_p=1,
+        max_tokens=300,
+        stream=True
+    )
+
+    response_chunks = []
+
+    for chunk in completion:
+        if (
+            hasattr(chunk, "choices")
+            and chunk.choices
+            and chunk.choices[0].delta.content
+        ):
+            response_chunks.append(chunk.choices[0].delta.content)
+
+    return clean_text("".join(response_chunks))
