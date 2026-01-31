@@ -3,18 +3,21 @@ from enum import Enum
 from datetime import datetime
 from typing import List, Dict
 
+
+
 class Dataset(BaseModel):
     total_assets: float
     total_liabilities: float
     new_liability: float
     monthly_emi: float
-    risk_score: float = 0 
+    risk_score: float = 0
+    risk_class: str = "SAFE"
 
-    def set_risk_score(self, risk_score: float):
-        self.risk_score = risk_score
+    def set_risk_class(self, risk_class: str):
+        self.risk_class = risk_class
 
-    def get_risk_score(self):
-        return self.risk_score
+    def get_risk_class(self):
+        return self.risk_class
 
 
 class ChatRequest(BaseModel):
@@ -33,6 +36,7 @@ class TransactionType(str, Enum):
 class BankStatement(BaseModel):
     date: datetime          
     particular: str
+    refNumber: str
     transactionType: TransactionType
     amount: float
 

@@ -3,6 +3,8 @@ from model import *
 from entity import Dataset
 from entity import ChatRequest
 from chat_bot import askAI
+from chat_bot import aiAnalysis
+from chat_bot import aiRecommendation
 from fastapi.responses import PlainTextResponse
 
 app = FastAPI()
@@ -20,10 +22,15 @@ def chat(req: ChatRequest):
 
 app = FastAPI()
 
-@app.post("/ai/risk")
+@app.post("/ai/risk", response_model=PredictedResponse)
 def predict(dataset: Dataset):
-    risk = predict_risk(dataset)
-    return risk
+    riskClass = aiAnalysis(dataset=dataset)
+    description = aiRecommendation(dataset=dataset, risk_class=riskClass)
+    print("Risk: "+riskClass + "\n desc: "+description)
+    return PredictedResponse(
+        riskClass=riskClass,
+        description=description
+    )
 
 @app.post("/ai/save-dataset")
 def save_dataset(dataset: Dataset):
